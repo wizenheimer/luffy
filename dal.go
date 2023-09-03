@@ -80,3 +80,28 @@ func (d *dal) writePage(p *page) error {
 	_, err := d.file.WriteAt(p.data, offset)
 	return err
 }
+
+// serialize and persist meta onto memory
+func (d *dal) writeMeta(m *meta) (*page, error) {
+	p := d.allocateEmptyPage()
+	p.num = metaPageNum
+	m.serialize(p.data)
+
+	err := d.writePage(p)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+//  deserialize
+func (d *dal) readMeta() (*meta, error) {
+	p, err := d.readPage(metaPageNum)
+	if err != nil {
+		return nil, err
+	}
+
+	meta := newEmptyMeta()
+	meta.deserialize(p.data)
+	return meta, nil
+}
