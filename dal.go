@@ -10,6 +10,7 @@ type (
 	dal struct {
 		file     *os.File
 		pageSize int
+		fl       *freelist
 	}
 
 	// for representing page
@@ -29,6 +30,7 @@ func newDal(path string, pageSize int) (*dal, error) {
 	dal := &dal{
 		file:     file,
 		pageSize: pageSize,
+		fl:       newFreelist(),
 	}
 
 	return dal, nil
