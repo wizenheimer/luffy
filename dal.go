@@ -182,3 +182,40 @@ func (d *dal) readFreelist() (*freelist, error) {
 	freelist.deserialize(p.data)
 	return freelist, nil
 }
+
+// fetch node from page
+func (d *dal) getNode(pageNum pgnum) (*Node, error) {
+	p, err := d.readPage(pageNum)
+	if err != nil {
+		return nil, err
+	}
+
+	node := NewEmptyNode()
+	node.deserialize(p.data)
+	node.pageNum = pageNum
+	return node, nil
+}
+
+// write node into page
+func (d *dal) writeNode(n *Node) (*Node, error) {
+	p := d.allocateEmptyPage()
+	if n.pageNum == 0 {
+		p.num = d.getNextPage()
+		n.pageNum = p.num
+	} else {
+		p.num = n.pageNum
+	}
+
+	p.data = n.serialize(p.data)
+
+	err := d.writePage(p)
+	if err != nil {
+		return nil, err
+	}
+
+	return n, nil
+}
+
+func (d *dal) deleteNode(pageNum pgnum) {
+	d.releasePage(pageNum)
+}
