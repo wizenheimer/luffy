@@ -9,13 +9,23 @@ type (
 	// for holding page number of the page
 	pgnum uint64
 
+	// for holding the options for initializing the database
+	Options struct {
+		pageSize       int
+		MinFillPercent float32
+		MaxFillPercent float32
+	}
+
 	// for representing data access layer
 	// dal.pageSize holds the capacity of the page
 	// dal.freelist embeds the freelist struct
 	// dal.meta embeds the meta struct
 	dal struct {
-		file     *os.File
-		pageSize int
+		pageSize       int
+		MinFillPercent float32
+		MaxFillPercent float32
+		file           *os.File
+
 		*freelist
 		*meta
 	}
@@ -29,11 +39,19 @@ type (
 	}
 )
 
+var DefaultOptions = &Options{
+	pageSize:       os.Getpagesize(),
+	MinFillPercent: 0.5,
+	MaxFillPercent: 0.95,
+}
+
 // constructor for creating a data access layer
-func newDal(path string) (*dal, error) {
+func newDal(path string, options *Options) (*dal, error) {
 	dal := &dal{
-		meta:     newEmptyMeta(),
-		pageSize: os.Getpagesize(),
+		meta:           newEmptyMeta(),
+		pageSize:       options.pageSize,
+		MinFillPercent: options.MinFillPercent,
+		MaxFillPercent: options.MaxFillPercent,
 	}
 
 	// file already exists at the path, read it and load it into struct

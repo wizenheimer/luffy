@@ -183,3 +183,21 @@ func findKeyHelper(node *Node, key []byte) (int, *Node, error) {
 
 	return findKeyHelper(nextChild, key)
 }
+
+func (n *Node) elementSize(i int) int {
+	size := 0
+	size += len(n.items[i].key)
+	size += len(n.items[i].value)
+	size += pageNumSize
+	return size
+}
+
+func (n *Node) nodeSize() int {
+	size := 0
+	size += nodeHeaderSize
+	for i := range n.items {
+		size += n.elementSize(i)
+	}
+	size += pageNumSize
+	return size
+}

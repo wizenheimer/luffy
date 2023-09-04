@@ -2,7 +2,7 @@ package main
 
 func main() {
 	// iniialize db
-	dal, _ := newDal("test.db")
+	dal, _ := newDal("test.db", DefaultOptions)
 
 	// create new page
 	p := dal.allocateEmptyPage()
@@ -17,7 +17,7 @@ func main() {
 	_ = dal.close()
 
 	// iniialize db
-	dal, _ = newDal("test.db")
+	dal, _ = newDal("test.db", DefaultOptions)
 
 	// create new page
 	p = dal.allocateEmptyPage()
