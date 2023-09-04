@@ -1,4 +1,4 @@
-package luffy
+package main
 
 import "encoding/binary"
 

@@ -1,4 +1,4 @@
-package luffy
+package main
 
 import (
 	"errors"
@@ -30,13 +30,14 @@ type (
 )
 
 // constructor for creating a data access layer
-func newDal(path string, pageSize int) (*dal, error) {
+func newDal(path string) (*dal, error) {
 	dal := &dal{
-		meta: &meta{},
+		meta:     newEmptyMeta(),
+		pageSize: os.Getpagesize(),
 	}
 
 	// file already exists at the path, read it and load it into struct
-	if _, err := os.Stat(path); err != nil {
+	if _, err := os.Stat(path); err == nil {
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
 			_ = dal.close()
@@ -47,17 +48,16 @@ func newDal(path string, pageSize int) (*dal, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		dal.meta = meta
 
 		freelist, err := dal.readFreelist()
 		if err != nil {
 			return nil, err
 		}
-
 		dal.freelist = freelist
+		// doesn't exist
 	} else if errors.Is(err, os.ErrNotExist) {
-		// file doesn't exist at the path
+		// init freelist
 		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 		if err != nil {
 			_ = dal.close()
@@ -66,17 +66,17 @@ func newDal(path string, pageSize int) (*dal, error) {
 
 		dal.freelist = newFreelist()
 		dal.freelistPage = dal.getNextPage()
-		_, err := dal.writeFreeList()
+		_, err := dal.writeFreelist()
 		if err != nil {
 			return nil, err
 		}
 
-		_, err = dal.writeMeta(dal.meta)
+		// write meta page
+		_, err = dal.writeMeta(dal.meta) // other error
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		// for anything else
 		return nil, err
 	}
 	return dal, nil
@@ -156,7 +156,7 @@ func (d *dal) readMeta() (*meta, error) {
 // allocates an empty page
 // assigns the highest allocated page to freelistpage
 // serializes the freelist onto the page
-func (d *dal) writeFreeList() (*page, error) {
+func (d *dal) writeFreelist() (*page, error) {
 	p := d.allocateEmptyPage()
 	p.num = d.freelistPage
 	d.freelist.serialize(p.data)
