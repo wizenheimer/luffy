@@ -1,19 +1,28 @@
 package luffy
 
-import "os"
+import (
+	"errors"
+	"os"
+)
 
 type (
 	// for holding page number of the page
 	pgnum uint64
 
 	// for representing data access layer
+	// dal.pageSize holds the capacity of the page
+	// dal.freelist embeds the freelist struct
+	// dal.meta embeds the meta struct
 	dal struct {
 		file     *os.File
 		pageSize int
-		fl       *freelist
+		*freelist
+		*meta
 	}
 
 	// for representing page
+	// page.num hold the page number identifier
+	// page.data hold the page number data
 	page struct {
 		num  pgnum
 		data []byte
@@ -22,17 +31,54 @@ type (
 
 // constructor for creating a data access layer
 func newDal(path string, pageSize int) (*dal, error) {
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
-	if err != nil {
+	dal := &dal{
+		meta: &meta{},
+	}
+
+	// file already exists at the path, read it and load it into struct
+	if _, err := os.Stat(path); err != nil {
+		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			_ = dal.close()
+			return nil, err
+		}
+
+		meta, err := dal.readMeta()
+		if err != nil {
+			return nil, err
+		}
+
+		dal.meta = meta
+
+		freelist, err := dal.readFreelist()
+		if err != nil {
+			return nil, err
+		}
+
+		dal.freelist = freelist
+	} else if errors.Is(err, os.ErrNotExist) {
+		// file doesn't exist at the path
+		dal.file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			_ = dal.close()
+			return nil, err
+		}
+
+		dal.freelist = newFreelist()
+		dal.freelistPage = dal.getNextPage()
+		_, err := dal.writeFreeList()
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = dal.writeMeta(dal.meta)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// for anything else
 		return nil, err
 	}
-
-	dal := &dal{
-		file:     file,
-		pageSize: pageSize,
-		fl:       newFreelist(),
-	}
-
 	return dal, nil
 }
 
@@ -94,7 +140,7 @@ func (d *dal) writeMeta(m *meta) (*page, error) {
 	return p, nil
 }
 
-//  deserialize
+// deserialize
 func (d *dal) readMeta() (*meta, error) {
 	p, err := d.readPage(metaPageNum)
 	if err != nil {
@@ -104,4 +150,35 @@ func (d *dal) readMeta() (*meta, error) {
 	meta := newEmptyMeta()
 	meta.deserialize(p.data)
 	return meta, nil
+}
+
+// writing freelists onto memory
+// allocates an empty page
+// assigns the highest allocated page to freelistpage
+// serializes the freelist onto the page
+func (d *dal) writeFreeList() (*page, error) {
+	p := d.allocateEmptyPage()
+	p.num = d.freelistPage
+	d.freelist.serialize(p.data)
+
+	err := d.writePage(p)
+	if err != nil {
+		return nil, err
+	}
+
+	d.freelistPage = p.num
+	return p, nil
+}
+
+// read the freelist page
+// deserialize and load onto a new freelist struct
+func (d *dal) readFreelist() (*freelist, error) {
+	p, err := d.readPage(d.freelistPage)
+	if err != nil {
+		return nil, err
+	}
+
+	freelist := newFreelist()
+	freelist.deserialize(p.data)
+	return freelist, nil
 }

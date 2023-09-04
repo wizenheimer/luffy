@@ -14,16 +14,16 @@ func newEmptyMeta() *meta {
 	return &meta{}
 }
 
-// conversion of structs to binary and put it into freelistpage
+// serialize and load the freelist page
 func (m *meta) serialize(buf []byte) {
 	pos := 0
 	binary.LittleEndian.PutUint64(buf[pos:], uint64(m.freelistPage))
 	pos += pageNumSize
 }
 
-// deserialize the bytes
+// deserialize and store the freelistPage onto the struct
 func (m *meta) deserialize(buf []byte) {
 	pos := 0
-	binary.LittleEndian.Uint64(buf[pos:])
+	m.freelistPage = pgnum(binary.LittleEndian.Uint64(buf[pos:]))
 	pos += pageNumSize
 }
