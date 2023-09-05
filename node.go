@@ -224,3 +224,31 @@ func (n *Node) isOverPopulated() bool {
 func (n *Node) isUnderPopulated() bool {
 	return n.dal.isUnderPopulated(n)
 }
+
+// split the nodes
+func (n *Node) split(nodeToSplit *Node, nodeToSplitIndex int) {
+	splitIndex := nodeToSplit.dal.getSplitIndex(nodeToSplit)
+
+	middleItem := nodeToSplit.items[splitIndex]
+	var newNode *Node
+
+	if nodeToSplit.isLeaf() {
+		newNode = n.writeNode(n.dal.newNode(nodeToSplit.items[splitIndex+1:], []pgnum{}))
+		nodeToSplit.items = nodeToSplit.items[:splitIndex]
+	} else {
+		newNode = n.writeNode(n.dal.newNode(nodeToSplit.items[splitIndex+1:], nodeToSplit.childNodes[splitIndex+1:]))
+		nodeToSplit.items = nodeToSplit.items[:splitIndex]
+		nodeToSplit.childNodes = nodeToSplit.childNodes[:splitIndex+1]
+	}
+
+	n.addItem(middleItem, nodeToSplitIndex)
+
+	if len(n.childNodes) == nodeToSplitIndex+1 {
+		n.childNodes = append(n.childNodes, newNode.pageNum)
+	} else {
+		n.childNodes = append(n.childNodes[:nodeToSplitIndex+1], n.childNodes[nodeToSplitIndex:]...)
+		n.childNodes[nodeToSplitIndex+1] = newNode.pageNum
+	}
+
+	n.writeNodes(n, nodeToSplit)
+}

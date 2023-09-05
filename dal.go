@@ -201,6 +201,16 @@ func (d *dal) readFreelist() (*freelist, error) {
 	return freelist, nil
 }
 
+// create a new Node with it's keys, values and child nodes page
+func (d *dal) newNode(items []*Item, childNodes []pgnum) *Node {
+	node := NewEmptyNode()
+	node.items = items
+	node.childNodes = childNodes
+	node.pageNum = d.getNextPage()
+	node.dal = d
+	return node
+}
+
 // fetch node from page
 func (d *dal) getNode(pageNum pgnum) (*Node, error) {
 	p, err := d.readPage(pageNum)
@@ -253,4 +263,19 @@ func (d *dal) isOverPopulated(n *Node) bool {
 
 func (d *dal) isUnderPopulated(n *Node) bool {
 	return float32(n.nodeSize()) < d.minThreshold()
+}
+
+// fetch split index in a node
+func (d *dal) getSplitIndex(node *Node) int {
+	size := 0
+	size += nodeHeaderSize
+
+	for i := range node.items {
+		size += node.elementSize(i)
+		if float32(size) > d.minThreshold() && i < len(node.items)-1 {
+			return i + 1
+		}
+	}
+
+	return -1
 }
