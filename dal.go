@@ -41,7 +41,7 @@ type (
 
 var DefaultOptions = &Options{
 	pageSize:       os.Getpagesize(),
-	MinFillPercent: 0.5,
+	MinFillPercent: 0.50,
 	MaxFillPercent: 0.95,
 }
 
@@ -236,4 +236,21 @@ func (d *dal) writeNode(n *Node) (*Node, error) {
 
 func (d *dal) deleteNode(pageNum pgnum) {
 	d.releasePage(pageNum)
+}
+
+// helpers to determine thresholds
+func (d *dal) maxThreshold() float32 {
+	return d.MaxFillPercent * float32(d.pageSize)
+}
+
+func (d *dal) minThreshold() float32 {
+	return d.MinFillPercent * float32(d.pageSize)
+}
+
+func (d *dal) isOverPopulated(n *Node) bool {
+	return float32(n.nodeSize()) > d.maxThreshold()
+}
+
+func (d *dal) isUnderPopulated(n *Node) bool {
+	return float32(n.nodeSize()) < d.minThreshold()
 }

@@ -184,6 +184,7 @@ func findKeyHelper(node *Node, key []byte) (int, *Node, error) {
 	return findKeyHelper(nextChild, key)
 }
 
+// calculates the size of the element in a node
 func (n *Node) elementSize(i int) int {
 	size := 0
 	size += len(n.items[i].key)
@@ -192,6 +193,7 @@ func (n *Node) elementSize(i int) int {
 	return size
 }
 
+// calculate the size of node along with the elements in it
 func (n *Node) nodeSize() int {
 	size := 0
 	size += nodeHeaderSize
@@ -200,4 +202,25 @@ func (n *Node) nodeSize() int {
 	}
 	size += pageNumSize
 	return size
+}
+
+// add item into the node
+func (n *Node) addItem(item *Item, insertionIndex int) int {
+	if len(n.items) == insertionIndex {
+		n.items = append(n.items, item)
+		return insertionIndex
+	}
+	n.items = append(n.items[:insertionIndex], n.items[insertionIndex:]...)
+	n.items[insertionIndex] = item
+	return insertionIndex
+}
+
+// determine whether node is overpopulated or not
+func (n *Node) isOverPopulated() bool {
+	return n.dal.isOverPopulated(n)
+}
+
+// determine whether node is underpopulated or not
+func (n *Node) isUnderPopulated() bool {
+	return n.dal.isUnderPopulated(n)
 }
