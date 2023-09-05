@@ -16,6 +16,7 @@ type Node struct {
 	pageNum    pgnum   // node resides on this page
 	childNodes []pgnum // holds the child nodes
 	items      []*Item // holds list of items i.e. key value pairs
+	tx         *tx
 }
 
 func NewEmptyNode() *Node {

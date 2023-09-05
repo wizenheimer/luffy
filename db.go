@@ -28,3 +28,15 @@ func Open(path string, options *Options) (*DB, error) {
 func (db *DB) Close() error {
 	return db.close()
 }
+
+// for opening transactions and acquirin locks
+
+func (db *DB) ReadTx() *tx {
+	db.rwlock.RLock()
+	return newTx(db, false)
+}
+
+func (db *DB) WriteTx() *tx {
+	db.rwlock.Lock()
+	return newTx(db, true)
+}

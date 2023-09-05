@@ -6,6 +6,7 @@ type Collection struct {
 	name []byte
 	root pgnum
 	dal  *dal
+	tx   *tx
 }
 
 func newCollection(name []byte, root pgnum) *Collection {
@@ -34,7 +35,7 @@ func (c *Collection) Find(key []byte) (*Item, error) {
 }
 
 func (c *Collection) getNodes(indexes []int) ([]*Node, error) {
-	root, err := c.dal.getNode(c.root)
+	root, err := c.tx.getNode(c.root)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,7 @@ func (c *Collection) getNodes(indexes []int) ([]*Node, error) {
 	nodes := []*Node{root}
 	child := root
 	for i := 1; i < len(indexes); i++ {
-		child, err = c.dal.getNode(child.childNodes[indexes[i]])
+		child, err = c.tx.getNode(child.childNodes[indexes[i]])
 		if err != nil {
 			return nil, err
 		}
@@ -52,6 +53,10 @@ func (c *Collection) getNodes(indexes []int) ([]*Node, error) {
 }
 
 func (c *Collection) Put(key []byte, value []byte) error {
+	if !c.tx.write {
+		return writeInsideReadTxErr
+	}
+
 	i := newItem(key, value)
 
 	var root *Node
