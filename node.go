@@ -159,29 +159,34 @@ func (n *Node) findKeyInNode(key []byte) (bool, int) {
 	return false, len(n.items)
 }
 
-func (n *Node) findKey(key []byte) (int, *Node, error) {
-	index, node, err := findKeyHelper(n, key)
+func (n *Node) findKey(key []byte, exact bool) (int, *Node, []int, error) {
+	ancestorsIndexes := []int{0} // index of root
+	index, node, err := findKeyHelper(n, key, exact, &ancestorsIndexes)
 	if err != nil {
-		return -1, nil, err
+		return -1, nil, nil, err
 	}
-
-	return index, node, nil
+	return index, node, ancestorsIndexes, nil
 }
 
-func findKeyHelper(node *Node, key []byte) (int, *Node, error) {
+func findKeyHelper(node *Node, key []byte, exact bool, ancestorsIndexes *[]int) (int, *Node, error) {
 	wasFound, index := node.findKeyInNode(key)
 	if wasFound {
 		return index, node, nil
 	}
+
 	if node.isLeaf() {
-		return -1, nil, nil
+		if exact {
+			return -1, nil, nil
+		}
+		return index, node, nil
 	}
+
+	*ancestorsIndexes = append(*ancestorsIndexes, index)
 	nextChild, err := node.getNode(node.childNodes[index])
 	if err != nil {
 		return -1, nil, err
 	}
-
-	return findKeyHelper(nextChild, key)
+	return findKeyHelper(nextChild, key, exact, ancestorsIndexes)
 }
 
 // calculates the size of the element in a node
