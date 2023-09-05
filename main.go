@@ -1,4 +1,4 @@
-package main
+package luffy
 
 func main() {
 	// iniialize db
